@@ -1,0 +1,1 @@
+select count(c.customer_id ) as customers_count from customers c --общее количество покупателей из таблицы customers	
