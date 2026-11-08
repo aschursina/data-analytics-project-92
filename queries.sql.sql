@@ -1,11 +1,19 @@
-select count(c.customer_id ) as customers_count from customers c --общее количество покупателей из таблицы customers	
+--Товары
+--Самые продаваемые
+select product_id as ProductID, sum(quantity) as TotalQuantity
+FROM public.sales group by product_id  order by sum(quantity) desc limit 10
 
---АНАЛИЗ ОТДЕЛА ПРОДАЖ
---Отчет 1
+--По сумме продаж
+select s.product_id as ProductID, round(sum(s.quantity * p.price),0) as amount
+FROM public.sales s join products p on s.product_id = p.product_id group by s.product_id order by amount desc limit 10
+
+SELECT COUNT(c.customer_id ) as customers_count FROM customers c --общее количество покупателей из таблицы customers	
+
+--Отчет 1 top_10_total_income
 WITH sellers AS (
     SELECT 
         s.sales_person_id, 
-        CONCAT(e.last_name, ' ', e.first_name) AS seller, --склеивание ФИ
+        CONCAT(e.first_name, ' ', e.last_name) AS seller, --склеивание ФИ
         SUM(s.quantity * p.price) as income, --выручка
         COUNT(s.sales_id) AS operations --количество сделок
     FROM sales s 
@@ -16,16 +24,16 @@ WITH sellers AS (
 SELECT 
     s.seller,
     s.operations,
-    round(s.income) as income
+    ROUND(s.income) as income
 FROM sellers s 
 ORDER BY s.income DESC
 LIMIT 10
 
---Отчет 2
+--Отчет 2 lowest_average_income
 WITH sellers AS (
     SELECT 
         s.sales_person_id, 
-        CONCAT(e.last_name, ' ', e.first_name) AS seller, 
+        CONCAT(e.first_name, ' ', e.last_name) AS seller, 
         SUM(s.quantity * p.price) as income,
         COUNT(s.sales_id) AS operations,
         SUM(s.quantity * p.price)  / COUNT(s.sales_id) as avg_income, --среднее за сделку продавца
@@ -38,14 +46,14 @@ WITH sellers AS (
 SELECT 
     s.seller,
     round(s.avg_income) as average_income
-from sellers s
-where s.avg_income < s.company_avg_income --поиск средней выручки за сделку, которая меньше средней выручки за сделку по всем продавцам
-order by s.avg_income 
+FROM sellers s
+WHERE s.avg_income < s.company_avg_income --поиск средней выручки за сделку, которая меньше средней выручки за сделку по всем продавцам
+ORDER BY s.avg_income 
 
---Отчет 3
+--Отчет 3 day_of_the_week_income
 WITH income_daily AS (
     SELECT 
-        CONCAT(e.last_name, ' ', e.first_name) AS seller, --склеивание ФИ
+        CONCAT(e.first_name, ' ', e.last_name) AS seller, --склеивание ФИ
         s.sale_date::date as sale_date,
         SUM(s.quantity * p.price) as income --выручка    
     FROM sales s 
@@ -58,10 +66,11 @@ SELECT
     trim(to_char(i.sale_date, 'Day' )) as day_of_week, --получение дня недели из даты
     round(i.income) as income
 FROM  income_daily i 
-ORDER by extract(dow from i.sale_date), i.seller --получение номера дня недели, 0 - sunday 
+ORDER by MOD(EXTRACT(DOW FROM i.sale_date) + 6, 7), i.seller
 
---АНАЛИЗ ПОКУПАТЕЛЕЙ
---Отчет 1
+
+--Анализ покупателей
+--Отчет 1 age_groups
 SELECT
 	CASE
 		when age between 16 and 25 then '16-25'
@@ -74,16 +83,16 @@ WHERE age >=16
 GROUP BY age_category
 ORDER BY  1
 
---Отчет 2
+--Отчет 2 customers_by_month
 SELECT
 	to_char(s.sale_date, 'YYYY-MM') as selling_month,
 	count(distinct(s.customer_id)) as total_customers,
-	sum(s.quantity * p.price) as income
+	round(sum(s.quantity * p.price)) as income
 FROM sales s join products p on s.product_id=p.product_id
 GROUP BY selling_month
 ORDER BY selling_month
 
---Отчет 3
+--Отчет 3 special_offer
 WITH first_sale AS (
 	SELECT
 		customer_id,
@@ -98,11 +107,11 @@ zero_price AS (
 	FROM sales s 
 	JOIN products p on s.product_id =p.product_id
 	WHERE p.price=0
-)-поиск клиентов с покупкой по акции
+)--поиск клиентов с покупкой по акции
 SELECT
-	CONCAT(c.last_name, ' ', c.first_name) AS customer,
+	CONCAT(c.first_name, ' ', c.last_name) AS customer,
 	fs.first_sale as sale_date, 
-	CONCAT(e.last_name, ' ', e.first_name) AS seller
+	CONCAT(e.first_name, ' ', e.last_name) AS seller
 FROM first_sale fs
 JOIN zero_price z on fs.customer_id =z.customer_id
 JOIN employees e ON fs.sales_person_id = e.employee_id
