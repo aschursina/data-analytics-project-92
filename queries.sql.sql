@@ -24,7 +24,7 @@ WITH sellers AS (
 SELECT 
     s.seller,
     s.operations,
-    ROUND(s.income) as income
+    floor(s.income) as income
 FROM sellers s 
 ORDER BY s.income DESC
 LIMIT 10
@@ -45,7 +45,7 @@ WITH sellers AS (
 ) --Получение данных для отчета 
 SELECT 
     s.seller,
-    round(s.avg_income) as average_income
+    floor(s.avg_income) as average_income
 FROM sellers s
 WHERE s.avg_income < s.company_avg_income --поиск средней выручки за сделку, которая меньше средней выручки за сделку по всем продавцам
 ORDER BY s.avg_income 
@@ -87,7 +87,7 @@ ORDER BY  1
 SELECT
 	to_char(s.sale_date, 'YYYY-MM') as selling_month,
 	count(distinct(s.customer_id)) as total_customers,
-	round(sum(s.quantity * p.price)) as income
+	floor(sum(s.quantity * p.price)) as income
 FROM sales s join products p on s.product_id=p.product_id
 GROUP BY selling_month
 ORDER BY selling_month
