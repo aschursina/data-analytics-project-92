@@ -1,12 +1,3 @@
---Товары
---Самые продаваемые
-select product_id as ProductID, sum(quantity) as TotalQuantity
-FROM public.sales group by product_id  order by sum(quantity) desc limit 10
-
---По сумме продаж
-select s.product_id as ProductID, round(sum(s.quantity * p.price),0) as amount
-FROM public.sales s join products p on s.product_id = p.product_id group by s.product_id order by amount desc limit 10
-
 SELECT COUNT(c.customer_id ) as customers_count FROM customers c --общее количество покупателей из таблицы customers	
 
 --Отчет 1 top_10_total_income
@@ -63,7 +54,7 @@ WITH income_daily AS (
 )  --получение данных о выручке по дате
 SELECT 
     i.seller,
-    trim(to_char(i.sale_date, 'Day' )) as day_of_week, --получение дня недели из даты
+    lower(trim(to_char(i.sale_date, 'Day' ))) as day_of_week, --получение дня недели из даты
     round(i.income) as income
 FROM  income_daily i 
 ORDER by MOD(EXTRACT(DOW FROM i.sale_date) + 6, 7), i.seller
