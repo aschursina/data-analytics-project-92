@@ -44,20 +44,30 @@ ORDER BY s.avg_income
 --Отчет 3 day_of_the_week_income
 WITH income_daily AS (
     SELECT 
-        CONCAT(e.first_name, ' ', e.last_name) AS seller, --склеивание ФИ
+        CONCAT(e.first_name, ' ', e.last_name) AS seller,
         s.sale_date::date as sale_date,
-        SUM(s.quantity * p.price) as income --выручка    
+        SUM(s.quantity * p.price) as income
     FROM sales s 
     JOIN employees e ON s.sales_person_id = e.employee_id
     JOIN products p ON s.product_id = p.product_id 
     GROUP BY e.last_name, e.first_name, s.sale_date
-)  --получение данных о выручке по дате
+),
+seller_weekday_income AS (
+    SELECT
+        i.seller,
+        trim(to_char(i.sale_date, 'Day')) as day_of_week,
+        -- Получаем номер дня по ISO: 1=Пн, 2=Вт, ..., 7=Вс
+        to_char(i.sale_date, 'ID')::int as iso_day_number,
+        SUM(i.income) as total_income
+    FROM income_daily i
+    GROUP BY i.seller, trim(to_char(i.sale_date, 'Day')), to_char(i.sale_date, 'ID')
+)
 SELECT 
-    i.seller,
-    lower(trim(to_char(i.sale_date, 'Day' ))) as day_of_week, --получение дня недели из даты
-    round(i.income) as income
-FROM  income_daily i 
-ORDER by MOD(EXTRACT(DOW FROM i.sale_date) + 6, 7), i.seller
+    seller,
+    day_of_week,
+    round(total_income) as income
+FROM seller_weekday_income
+ORDER BY iso_day_number::int, seller
 
 
 --Анализ покупателей
